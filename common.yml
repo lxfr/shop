@@ -1,0 +1,138 @@
+version: '2'
+services:
+  frontend:
+    image: "${APP_NAME}-frontend:${TAG}"
+    restart: always
+    depends_on:
+      - php
+    links:
+      - php
+    networks:
+      - web
+    labels:
+      - "traefik.backend=shop_frontend"
+      - "traefik.frontend.rule=Host:shop.dev"
+  backend:
+    image: "${APP_NAME}-backend:${TAG}"
+    restart: always
+    depends_on:
+      - php
+    links:
+      - php
+    networks:
+      - web
+    labels:
+      - "traefik.backend=shop_backend"
+      - "traefik.frontend.rule=Host:backend.shop.dev"
+  api:
+    image: "${APP_NAME}-api:${TAG}"
+    restart: always
+    depends_on:
+      - php
+    links:
+      - php
+    networks:
+      - web
+    labels:
+      - "traefik.backend=shop_db"
+  static:
+    image: "${APP_NAME}-static:${TAG}"
+    restart: always
+    depends_on:
+      - php
+    links:
+      - php
+    networks:
+      - web
+    labels:
+      - "traefik.backend=shop_static"
+      - "traefik.frontend.rule=Host:static.shop.dev"
+  php:
+    restart: always
+    links:
+      - elasticsearch1
+      - redis:cache
+      - db:db
+    depends_on:
+      - elasticsearch1
+      - redis
+      - db
+    networks:
+      - web
+    labels:
+      - "traefik.backend=shop_php"
+  redis:
+    image: "${APP_NAME}-redis:${TAG}"
+    build:
+      context: ./
+      dockerfile: "./docker/source/redis/Dockerfile"
+    restart: always
+    networks:
+      - web
+    labels:
+      - "traefik.backend=shop_redis"
+  db:
+    image: "${APP_NAME}-db:${TAG}"
+    restart: always
+    networks:
+      - web
+    labels:
+      - "traefik.backend=shop_db"
+  adminer:
+    image: "${APP_NAME}-adminer:${TAG}"
+    restart: always
+    links:
+      - db:db
+    networks:
+      - web
+    labels:
+      - "traefik.backend=shop_adminer"
+      - "traefik.frontend.rule=Host:adminer.shop.dev"
+  elasticsearch1:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.6.3
+    container_name: shop_elasticsearch1
+    environment:
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: 1g
+    volumes:
+      - esdata1:/usr/share/elasticsearch/data
+    ports:
+      - "${ELASTIC}:9200"
+    networks:
+      - web
+    labels:
+      - "traefik.backend=shop_elasticsearch1"
+      - "traefik.frontend.rule=Host:elasticsearch1.shop.dev"
+  elasticsearch2:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.6.3
+    environment:
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "discovery.zen.ping.unicast.hosts=shop_elasticsearch1"
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: 1g
+    volumes:
+      - esdata2:/usr/share/elasticsearch/data
+volumes:
+  db_data:
+    external: false
+  esdata1:
+    driver: local
+  esdata2:
+    driver: local
+networks:
+  web:
+    external:
+      name: traefik_webgateway

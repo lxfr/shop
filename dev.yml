@@ -1,0 +1,85 @@
+version: '2'
+services:
+  frontend:
+    build:
+      context: ./
+      dockerfile: "./docker/source/nginx/dev/frontend/Dockerfile"
+    volumes:
+      - "./app/shop:/app"
+      - "./docker/source/nginx/dev/frontend/conf.d:/etc/nginx/conf.d:ro"
+      - "./docker/logs/dev/frontend:/var/log/nginx"
+    expose:
+      - "80"
+    ports:
+      - "${DEV_FRONTEND}:80"
+    env_file:
+      - "./docker/env/dev/APP_ENV.env"
+  backend:
+    build:
+      context: ./
+      dockerfile: "./docker/source/nginx/dev/backend/Dockerfile"
+    volumes:
+      - "./app/shop:/app"
+      - "./docker/source/nginx/dev/backend/conf.d:/etc/nginx/conf.d:ro"
+      - "./docker/logs/dev/backend:/var/log/nginx"
+    expose:
+      - "80"
+    ports:
+      - "${DEV_BACKEND}:80"
+    env_file:
+      - "./docker/env/dev/APP_ENV.env"
+  api:
+    build:
+      context: ./
+      dockerfile: "./docker/source/nginx/dev/api/Dockerfile"
+    volumes:
+      - "./app/shop:/app"
+      - "./docker/source/nginx/dev/api/conf.d:/etc/nginx/conf.d:ro"
+      - "./docker/logs/dev/api:/var/log/nginx"
+    expose:
+      - "80"
+    ports:
+      - "${DEV_API}:80"
+    env_file:
+      - "./docker/env/dev/APP_ENV.env"
+  static:
+    build:
+      context: ./
+      dockerfile: "./docker/source/nginx/dev/static/Dockerfile"
+    volumes:
+      - "./app/shop:/app"
+      - "./docker/source/nginx/dev/static/conf.d:/etc/nginx/conf.d:ro"
+      - "./docker/logs/dev/static:/var/log/nginx"
+    expose:
+      - "80"
+    ports:
+      - "${DEV_STATIC}:80"
+    env_file:
+      - "./docker/env/dev/APP_ENV.env"
+  db:
+    build:
+      context: ./
+      dockerfile: "./docker/source/mariadb/dev/Dockerfile"
+    volumes:
+      - "db_data:/var/lib/mysql"
+      - "./docker/source/mariadb/db_dump/shop:/docker-entrypoint-initdb.d"
+    env_file:
+      - "./docker/env/dev/db.env"
+  php:
+    image: "${APP_NAME}-php-dev:${TAG}"
+    build:
+      context: ./
+      dockerfile: "./docker/source/php/dev/Dockerfile"
+    volumes:
+      - "./app/shop:/app"
+      - "./docker/source/php/dev/app/common/config:/app/environments/dev/common/config:rw"
+    env_file:
+      - "./docker/env/dev/XDEBUG_CONFIG.env"
+      - "./docker/env/dev/PHP_IDE_CONFIG.env"
+      - "./docker/env/dev/APP_ENV.env"
+  adminer:
+    build:
+      context: ./
+      dockerfile: "./docker/source/adminer/Dockerfile"
+    ports:
+      - "${DEV_ADMINER}:80"
